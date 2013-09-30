@@ -66,16 +66,13 @@ def main():
         drawmaze(MAZE, MSIZE, MSIZE, 10, 10, vx, vy, SCRW - 1, SCRH - 1)
 
         ch = SCR.getch()
-        if ch == curses.KEY_UP:
-            vy -= 1
-        elif ch == curses.KEY_DOWN:
-            vy += 1
-        elif ch == curses.KEY_LEFT:
-            vx -= 1
-        elif ch == curses.KEY_RIGHT:
-            vx += 1
-        elif ch == 27:
-            playing = False
+        if ch == curses.KEY_UP: vy -= 1
+        elif ch == curses.KEY_DOWN: vy += 1
+        elif ch == curses.KEY_LEFT: vx -= 1
+        elif ch == curses.KEY_RIGHT: vx += 1
+        elif ch == 27: playing = False
+
+        SCR.addstr(2, 2, str(int(ch)))
 
         SCR.move(SCRH - 1, SCRW - 1)
         SCR.refresh()
