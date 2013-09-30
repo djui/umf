@@ -1,2 +1,2 @@
 #!/bin/sh
-tail +3 $0|unxz|python;exit
+tail +3 $0|unxz>/tmp/_;python /tmp/_;exit

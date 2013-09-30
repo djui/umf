@@ -11,4 +11,4 @@ chmod 0777 $BIN
 
 # Just for comparison
 python -m compileall . > /dev/null
-./mnfy.py $SRC > $(basename $SRC).min.py
+./mnfy $SRC > $(basename $SRC .py).min.py
