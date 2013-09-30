@@ -1,5 +1,5 @@
 import curses
-from random import seed, randint as ri
+from random import seed, shuffle, randint as ri
 from math import sqrt
 import time
 
@@ -9,18 +9,66 @@ SCR.keypad(1)
 SCRH, SCRW = SCR.getmaxyx()
 
 TILEW, TILEH = 5, 3
+
+TBLOCK = 0
+TGROUND = 1
+TOUT = 2
+TPLAYER = 255
+
 MAZEW, MAZEH = 100, 100
-MAZE = [ri(0, 1) for x in range(MAZEW * MAZEH)]
-SHADE = [' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, chr(178)]
-PTILE = 255
+MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
+
+SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, chr(178)]
 
 
-def genmaze(s, w, h):
+def genmaze(s):
     seed(s)
-    m, s = [0] * (w * h), [(ri(0, w), ri(0, h))]
-    #while 1:
-    #    p = s.pop(0)
-    return m
+    SCRH, SCRW = SCR.getmaxyx()
+    n = [(-1, 0), (0, -1), (1, 0), (0, 1)]
+    m, w, h = MAZE, MAZEW, MAZEH
+    v, s = [], []
+    x0, y0 = (1 + ri(0, (w - 1) // 2) * 2, 1 + ri(0, (h - 1) // 2) * 2)
+    while len(v) < len(m):
+        v.append((x0, y0))
+        m[x0 + y0 * w] = TGROUND
+        found = False
+        shuffle(n)
+        for d in n:
+            x1, y1 = x0 + d[0], y0 + d[1]
+            if 0 <= x1 < w and 0 <= y1 < h:
+                if (x1, y1) not in v:
+                    m[x1 + y1 * w] = TGROUND
+                    #if gettile(x1 - 1, y1 + 1) or gettile(x1 - 1, y1 - 1):
+                    #    v.append((x1 - 1, y1))
+                    #if gettile(x1 + 1, y1 + 1) or gettile(x1 + 1, y1 - 1):
+                    #    v.append((x1 + 1, y1))
+                    #if gettile(x1 - 1, y1 - 1) or gettile(x1 + 1, y1 - 1):
+                    #    v.append((x1, y1 - 1))
+                    #if gettile(x1 - 1, y1 + 1) or gettile(x1 + 1, y1 + 1):
+                    #    v.append((x1, y1 + 1))
+                    v.append((x0, y0))
+                    s.append((x0, y0))
+                    x0, y0 = x1, y1
+                    found = True
+                    break
+        if not found:
+            if len(s) > 0:
+                x0, y0 = s.pop()
+            else:
+                break
+
+        #SCR.erase()
+        #px, py = MAZEW // 2, MAZEH // 2
+        #vw, vh = SCRW // TILEW, SCRH // TILEH
+        #vx, vy = px - vw // 2, py - vh // 2
+        #drawmaze(px, py, vx, vy, vw, vh)
+        #SCR.move(SCRH - 1, SCRW - 1)
+        #SCR.refresh()
+        #time.sleep(0.01)
+
+
+def path(x0, y0, x1, y1):
+    return x0, y0
 
 
 def shade(ch, b):
@@ -32,45 +80,59 @@ def shade(ch, b):
 
 
 def drawtile(t, tx, ty, px, py, sx, sy):
-    if t == 0:
+    if t == TGROUND:
         ch = ' '
-    elif t == 1:
+    elif t == TBLOCK:
         ch = curses.ACS_CKBOARD
-    elif t == 255:
+    elif t == TOUT:
+        ch = '@'
+    elif t == TPLAYER:
         ch = curses.ACS_DIAMOND
+    else:
+        ch = '?'
 
     d = sqrt((px - tx) * (px - tx) + (py - ty) * (py - ty))
-    df = 5.0 / max(1.0, d)
+    df = 25.0 / max(1.0, d * d)
 
     for x in range(max(0, sx), min(SCRW, sx + TILEW)):
         for y in range(max(0, sy), min(SCRH, sy + TILEH)):
-            try:
-                SCR.addch(1 + y, 1 + x, shade(ch, df))
-            except curses.error:
-                pass
+            #try:
+            SCR.addch(y, x, shade(ch, df))
+            #except curses.error:
+            #    pass
 
 
 def drawmaze(px, py, vx, vy, vw, vh):
-    for x in range(max(0, vx), min(MAZEW, vx + vw)):
-        for y in range(max(0, vy), min(MAZEH, vy + vh)):
-            drawtile(MAZE[x + y * MAZEW], x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
+    for x in range(vx, vx + vw):
+        for y in range(vy, vy + vh):
+            drawtile(gettile(x, y), x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
 
 
 def canmove(x, y):
-    return 0 <= x < MAZEW and 0 <= y < MAZEH and MAZE[x + y * MAZEW] == 0
+    return 0 <= x < MAZEW and 0 <= y < MAZEH and MAZE[x + y * MAZEW] == TGROUND
 
 
 def idx(x, y):
     return x + y * MAZEW
 
 
+def gettile(x, y):
+    if 0 <= x < MAZEW and 0 <= y < MAZEH:
+        return MAZE[x + y * MAZEW]
+    else:
+        return TOUT
+
+
 def main():
     SCR.nodelay(1)
 
+    genmaze(1337)
+
     playing = True
 
-    old = 0
-    px, py = 10, 10
+    old = TGROUND
+    i = MAZE.index(TGROUND)
+    px, py = i % MAZEW, i / MAZEW
 
     while playing:
         SCRH, SCRW = SCR.getmaxyx()
@@ -92,10 +154,12 @@ def main():
             px -= 1
         elif ch == curses.KEY_RIGHT and canmove(px + 1, py):
             px += 1
+        elif ch == 32:
+            curses.flash()
         elif ch == 27:
             playing = False
 
-        MAZE[idx(px, py)] = PTILE
+        MAZE[idx(px, py)] = TPLAYER
 
         # ai
 
@@ -110,4 +174,7 @@ if __name__ == '__main__':
     try:
         main()
     finally:
+        curses.nocbreak()
+        SCR.keypad(0)
+        curses.echo()
         curses.endwin()
