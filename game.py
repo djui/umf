@@ -64,13 +64,6 @@ def main():
         SCR.erase()
 
         drawmaze(MAZE, MSIZE, MSIZE, 10, 10, vx, vy, SCRW - 1, SCRH - 1)
-        #SCR.border()
-        #SCR.addch(y, x, ' ')
-        #SCRSZ = SCR.getmaxyx()
-        #y = randint(1, SCRSZ[0]-1)
-        #x = randint(1, SCRSZ[1]-1)
-        #SCR.addch(y, x, 'X')
-        #SCR.addstr(5, 5, str(SCRSZ))
 
         ch = SCR.getch()
         if ch == curses.KEY_UP:
@@ -91,8 +84,5 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except curses.error, e:
-        curses.endwin()
-        print e
     finally:
         curses.endwin()
