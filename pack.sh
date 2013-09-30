@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SRC=game.py
-BIN=bin/play.sh
+BIN=bin/play
 
 mkdir -p bin
 xz -9e --keep --force $SRC
