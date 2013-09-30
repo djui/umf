@@ -1,6 +1,7 @@
 import curses
-from random import seed, shuffle, randint as ri
 from math import sqrt
+import pygame
+from random import seed, shuffle, randint as ri
 import time
 
 SCR = curses.initscr()
@@ -130,6 +131,14 @@ def main():
 
     playing = True
 
+    # Music
+    pygame.mixer.init(44100, -16, 2, 4096)
+    pygame.mixer.music.load('music.xm')
+    pygame.mixer.music.play()
+    #sound = pygame.mixer.Sound('boom.wav')
+    #time.sleep(2)
+    #sound.play()
+
     old = TGROUND
     i = MAZE.index(TGROUND)
     px, py = i % MAZEW, i / MAZEW
@@ -171,10 +180,10 @@ def main():
         time.sleep(0.01)
 
 if __name__ == '__main__':
-    try:
+    #try:
         main()
-    finally:
-        curses.nocbreak()
-        SCR.keypad(0)
-        curses.echo()
-        curses.endwin()
+    #finally:
+    #    curses.nocbreak()
+    #    SCR.keypad(0)
+    #    curses.echo()
+    #    curses.endwin()
