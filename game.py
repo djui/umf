@@ -5,6 +5,7 @@ from random import seed, shuffle, randint as ri
 import time
 
 SCR = curses.initscr()
+#curses.start_color()
 SCR.keypad(1)
 
 SCRH, SCRW = SCR.getmaxyx()
@@ -15,16 +16,20 @@ TBLOCK = 0
 TGROUND = 1
 TOUT = 2
 TPLAYER = 255
+TEND = 254
 
-MAZEW, MAZEH = 100, 100
+MAZEW, MAZEH = 20, 20
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
 
 SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, chr(178)]
 
 
 def genmaze(s):
+    global MAZE
+    MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
+
     seed(s)
-    SCRH, SCRW = SCR.getmaxyx()
+
     n = [(-1, 0), (0, -1), (1, 0), (0, 1)]
     m, w, h = MAZE, MAZEW, MAZEH
     v, s = [], []
@@ -58,6 +63,7 @@ def genmaze(s):
             else:
                 break
 
+        #SCRH, SCRW = SCR.getmaxyx()
         #SCR.erase()
         #px, py = MAZEW // 2, MAZEH // 2
         #vw, vh = SCRW // TILEW, SCRH // TILEH
@@ -67,9 +73,54 @@ def genmaze(s):
         #SCR.refresh()
         #time.sleep(0.01)
 
+    while True:
+        i = ri(0, MAZEW * MAZEH - 1)
+        if MAZE[i] == TGROUND:
+            MAZE[i] = TEND
+            break
+
+
+class Node:
+    def __init__(self, xy):
+        self.c = 0
+        self.p = None
+        self.xy = xy
+
+
+def vadd(xy, dxy):
+    return (xy[0] + dxy[0], xy[1] + dxy[1])
+
 
 def path(x0, y0, x1, y1):
-    return x0, y0
+    openset = set()
+    closedset = set()
+    current = Node((x0, y0))
+    openset.add(current)
+    while openset:
+        current = min(openset, key=lambda n:n.c)
+        if current.xy == end.xy:
+            path = []
+            while current.parent:
+                path.append(current)
+                current = current.parent
+            path.append(current)
+            return path[::-1]
+        openset.remove(current)
+        closedset.add(current)
+        for move in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+            node = Node(vadd(current.xy, move))
+            if node in closedset:
+                continue
+            if node in openset:
+                new_c = current.c + 1
+                if node.c > new_c:
+                    node.c = new_c
+                    node.parent = current
+            else:
+                node.c = current.c + 1
+                node.parent = current
+                openset.add(node)
+    return None
 
 
 def shade(ch, b):
@@ -87,18 +138,22 @@ def drawtile(t, tx, ty, px, py, sx, sy):
         ch = curses.ACS_CKBOARD
     elif t == TOUT:
         ch = '@'
+    elif t == TEND:
+        ch = 'e'
     elif t == TPLAYER:
         ch = curses.ACS_DIAMOND
     else:
         ch = '?'
 
-    d = sqrt((px - tx) * (px - tx) + (py - ty) * (py - ty))
+    d = sqrt((px - tx) ** 2 + (py - ty) ** 2)
     df = 25.0 / max(1.0, d * d)
+
+    #curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
 
     for x in range(max(0, sx), min(SCRW, sx + TILEW)):
         for y in range(max(0, sy), min(SCRH, sy + TILEH)):
             #try:
-            SCR.addch(y, x, shade(ch, df))
+            SCR.addch(y, x, shade(ch, df)) #, curses.color_pair(1))
             #except curses.error:
             #    pass
 
@@ -110,7 +165,11 @@ def drawmaze(px, py, vx, vy, vw, vh):
 
 
 def canmove(x, y):
-    return 0 <= x < MAZEW and 0 <= y < MAZEH and MAZE[x + y * MAZEW] == TGROUND
+    if 0 <= x < MAZEW and 0 <= y < MAZEH:
+        t = MAZE[x + y * MAZEW]
+        return t == TGROUND or t == TEND
+    else:
+        return False
 
 
 def idx(x, y):
@@ -127,9 +186,9 @@ def gettile(x, y):
 def main():
     SCR.nodelay(1)
 
-    genmaze(1337)
+    level_seed = 1337
 
-    playing = True
+    genmaze(level_seed)
 
     # Music
     pygame.mixer.init(44100, -16, 2, 4096)
@@ -142,6 +201,8 @@ def main():
     old = TGROUND
     i = MAZE.index(TGROUND)
     px, py = i % MAZEW, i / MAZEW
+
+    playing = True
 
     while playing:
         SCRH, SCRW = SCR.getmaxyx()
@@ -167,6 +228,12 @@ def main():
             curses.flash()
         elif ch == 27:
             playing = False
+
+        if MAZE[idx(px, py)] == TEND:
+            level_seed += 1
+            genmaze(level_seed)
+            i = MAZE.index(TGROUND)
+            px, py = i % MAZEW, i / MAZEW
 
         MAZE[idx(px, py)] = TPLAYER
 
