@@ -14,12 +14,14 @@ SCRH, SCRW = SCR.getmaxyx()
 TILEW, TILEH = 5, 3
 
 TBLOCK = 0
-TGROUND = 1
-TOUT = 2
-TFLOWER = 3
-TEND = 4
-TMONSTER = 254
-TPLAYER = 255
+TGND = 1
+TGND2 = 2
+TOUT = 3
+TFLW = 4
+TEND = 5
+TBAD = 254
+TPLY = 255
+WALK = [TGND, TGND2, TFLW, TEND]
 
 MSPD = .35
 
@@ -41,14 +43,20 @@ def genm(s):
     x0, y0 = (1 + ri(0, (w - 1) // 2) * 2, 1 + ri(0, (h - 1) // 2) * 2)
     while len(v) < len(m):
         v.append((x0, y0))
-        m[x0 + y0 * w] = TGROUND
         found = False
         shuffle(n)
         for d in n:
             x1, y1 = x0 + d[0], y0 + d[1]
             if 0 <= x1 < w and 0 <= y1 < h:
                 if (x1, y1) not in v:
-                    m[x1 + y1 * w] = TFLOWER if ri(0, 100) < 5 else TGROUND
+                    r = ri(0, 200)
+                    if r < 2:
+                        t = TFLW
+                    elif r < 50:
+                        t = TGND2
+                    else:
+                        t = TGND
+                    m[x1 + y1 * w] = t
                     #if gett(x1 - 1, y1 + 1) or gett(x1 - 1, y1 - 1):
                     #    v.append((x1 - 1, y1))
                     #if gett(x1 + 1, y1 + 1) or gett(x1 + 1, y1 - 1):
@@ -80,14 +88,14 @@ def genm(s):
 
     while True:
         i = ri(0, MAZEW * MAZEH - 1)
-        if MAZE[i] == TGROUND:
+        if MAZE[i] in WALK:
             MAZE[i] = TEND
             break
 
-    i = MAZE.index(TGROUND)
+    i = MAZE.index(TGND)
     px, py = i % MAZEW, i / MAZEW
 
-    i = len(MAZE) - 1 - list(reversed(MAZE)).index(TGROUND)
+    i = len(MAZE) - 1 - list(reversed(MAZE)).index(TGND)
     mx, my = i % MAZEW, i / MAZEW
 
     #i = MAZE.index(TEND)
@@ -95,15 +103,15 @@ def genm(s):
     #for xy in path(px, py, ex, ey):
     #    i = xy[0] + xy[1] * MAZEW
     #    t = MAZE[i]
-    #    if t == TGROUND:
-    #        MAZE[i] = TFLOWER
+    #    if t == TGND:
+    #        MAZE[i] = TFLW
 
     return px, py, mx, my
 
 
 class Node:
     def __init__(self, x, y, t):
-        if t == TGROUND or t == TEND or t == TFLOWER:
+        if t in WALK:
             self.c = 0
         else:
             self.c = 1000
@@ -121,7 +129,7 @@ def path(x0, y0, x1, y1):
         for i, j in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
             if 0 <= x + i < MAZEW and 0 <= y + j < MAZEH:
                 t = MAZE[x + y * MAZEW]
-                if t == TGROUND or t == TEND or t == TFLOWER:
+                if t in WALK:
                     n.append(ns[x + i][y + j])
         g[ns[x][y]] = n
     os, cs = set(), set()
@@ -164,8 +172,15 @@ def shade(ch, b):
 
 
 def drawt(t, tx, ty, px, py, sx, sy):
-    if t == TGROUND:
+    d = sqrt((px - tx) ** 2 + (py - ty) ** 2)
+
+    if t == TGND:
         ch = ' '
+    elif t == TGND2:
+        SCR.addstr(sy,   sx, '.  ..')
+        SCR.addstr(sy+1, sx, '  .  ')
+        SCR.addstr(sy+2, sx, ' . ..')
+        return
     elif t == TBLOCK or t == TOUT:
         ch = curses.ACS_CKBOARD
     elif t == TEND:
@@ -173,17 +188,26 @@ def drawt(t, tx, ty, px, py, sx, sy):
         SCR.addstr(sy+1, sx, '  _|#')
         SCR.addstr(sy+2, sx, '_|###')
         return
-    elif t == TPLAYER:
+    elif t == TPLY:
         SCR.addstr(sy,   sx, '  o /')
         SCR.addstr(sy+1, sx, '()|` ')
         SCR.addstr(sy+2, sx, ' / \ ')
         return
-    elif t == TMONSTER:
-        SCR.addstr(sy,   sx, ' _.. ')
-        SCR.addstr(sy+1, sx, '(o O)')
-        SCR.addstr(sy+2, sx, '/v^v\\')
+    elif t == TBAD:
+        if d <= 4.:
+            SCR.addstr(sy,   sx, ' _.. ')
+            SCR.addstr(sy+1, sx, '(o O)')
+            SCR.addstr(sy+2, sx, '/v^v\\')
+        elif d <= 5.5:
+            SCR.addstr(sy,   sx, '     ')
+            SCR.addstr(sy+1, sx, ' o O ')
+            SCR.addstr(sy+2, sx, ' , v ')
+        elif d <= 7.:
+            SCR.addstr(sy,   sx, '     ')
+            SCR.addstr(sy+1, sx, ' . o ')
+            SCR.addstr(sy+2, sx, '   , ')
         return
-    elif t == TFLOWER:
+    elif t == TFLW:
         SCR.addstr(sy,   sx, '     ')
         SCR.addstr(sy+1, sx, '  w  ')
         SCR.addstr(sy+2, sx, '_\|/_')
@@ -191,7 +215,6 @@ def drawt(t, tx, ty, px, py, sx, sy):
     else:
         ch = '?'
 
-    d = sqrt((px - tx) ** 2 + (py - ty) ** 2)
     df = 15.0 / max(1.0, d * d) + random()/20 # Flickering
 
     for x, y in product(range(sx, sx + TILEW), range(sy, sy + TILEH)):
@@ -206,7 +229,7 @@ def drawm(px, py, vx, vy, vw, vh):
 def canmove(x, y):
     if 0 <= x < MAZEW and 0 <= y < MAZEH:
         t = MAZE[x + y * MAZEW]
-        return t == TGROUND or t == TEND or t == TFLOWER or t == TPLAYER or t == TMONSTER
+        return t in WALK or t == TPLY or t == TBAD
     else:
         return False
 
@@ -267,7 +290,7 @@ def main():
                 if canmove(mxx, myy):
                     mx, my = mxx, myy
         mold = gett(mx, my)
-        sett(mx, my, TMONSTER)
+        sett(mx, my, TBAD)
 
         sett(px, py, pold)
         ch = SCR.getch()
@@ -289,12 +312,12 @@ def main():
         elif (mx, my) == (px, py):
             curses.flash()
             px, py, mx, my = genm(lvl)
-            mold, pold = TGROUND, TGROUND
-            sett(mx, my, TMONSTER)
-            sett(px, py, TPLAYER)
+            mold, pold = TGND, TGND
+            sett(mx, my, TBAD)
+            sett(px, py, TPLY)
         else:
             pold = t
-            sett(px, py, TPLAYER)
+            sett(px, py, TPLY)
 
         #SCR.move(SCRH - 1, SCRW - 1)
         SCR.refresh()
