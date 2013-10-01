@@ -128,7 +128,7 @@ def path(x0, y0, x1, y1):
     c, end = ns[x0][y0], ns[x1][y1]
     os.add(c)
     while os:
-        c = min(os, key=lambda n:n.c + h(n.xy, (x1, y1)))
+        c = min(os, key=lambda n: n.c + h(n.xy, (x1, y1)))
         if c == end:
             p = []
             while c.p:
