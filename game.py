@@ -182,8 +182,16 @@ def drawtile(t, tx, ty, px, py, sx, sy):
         SCR.addstr(sy+1, sx, '()|` ')
         SCR.addstr(sy+2, sx, ' / \ ')
         return
+    elif t == TMONSTER:
+        SCR.addstr(sy,   sx, ' _.. ')
+        SCR.addstr(sy+1, sx, '(o O)')
+        SCR.addstr(sy+2, sx, '/v^v\\')
+        return
     elif t == TFLOWER:
-        ch = 'i'
+        SCR.addstr(sy,   sx, '     ')
+        SCR.addstr(sy+1, sx, '  w  ')
+        SCR.addstr(sy+2, sx, '_\|/_')
+        return
     else:
         ch = '?'
 
@@ -231,8 +239,8 @@ def main():
 
     # Music
     pygame.mixer.init(44100, -16, 2, 4096)
-    #pygame.mixer.music.load('music.xm')
-    #pygame.mixer.music.play()
+    pygame.mixer.music.load('music.xm')
+    pygame.mixer.music.play()
     #sound = pygame.mixer.Sound('boom.wav')
     #time.sleep(2)
     #sound.play()
