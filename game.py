@@ -29,7 +29,7 @@ MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
 SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, ' ']
 
 
-def genmaze(s):
+def genm(s):
     global MAZE
     MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
 
@@ -49,13 +49,13 @@ def genmaze(s):
             if 0 <= x1 < w and 0 <= y1 < h:
                 if (x1, y1) not in v:
                     m[x1 + y1 * w] = TFLOWER if ri(0, 100) < 5 else TGROUND
-                    #if gettile(x1 - 1, y1 + 1) or gettile(x1 - 1, y1 - 1):
+                    #if gett(x1 - 1, y1 + 1) or gett(x1 - 1, y1 - 1):
                     #    v.append((x1 - 1, y1))
-                    #if gettile(x1 + 1, y1 + 1) or gettile(x1 + 1, y1 - 1):
+                    #if gett(x1 + 1, y1 + 1) or gett(x1 + 1, y1 - 1):
                     #    v.append((x1 + 1, y1))
-                    #if gettile(x1 - 1, y1 - 1) or gettile(x1 + 1, y1 - 1):
+                    #if gett(x1 - 1, y1 - 1) or gett(x1 + 1, y1 - 1):
                     #    v.append((x1, y1 - 1))
-                    #if gettile(x1 - 1, y1 + 1) or gettile(x1 + 1, y1 + 1):
+                    #if gett(x1 - 1, y1 + 1) or gett(x1 + 1, y1 + 1):
                     #    v.append((x1, y1 + 1))
                     v.append((x0, y0))
                     s.append((x0, y0))
@@ -73,7 +73,7 @@ def genmaze(s):
         #px, py = MAZEW // 2, MAZEH // 2
         #vw, vh = SCRW // TILEW, SCRH // TILEH
         #vx, vy = px - vw // 2, py - vh // 2
-        #drawmaze(px, py, vx, vy, vw, vh)
+        #drawm(px, py, vx, vy, vw, vh)
         #SCR.move(SCRH - 1, SCRW - 1)
         #SCR.refresh()
         #time.sleep(0.01)
@@ -114,20 +114,18 @@ class Node:
 def path(x0, y0, x1, y1):
     def h(xy, end):
         return sqrt((xy[0] - end[0]) ** 2 + (xy[1] - end[1]) ** 2)
-    nodes = [[Node(x, y, MAZE[x + y * MAZEW]) for y in range(MAZEH)] for x in range(MAZEW)]
-    graph = {}
+    ns = [[Node(x, y, MAZE[x + y * MAZEW]) for y in range(MAZEH)] for x in range(MAZEW)]
+    g = {}
     for x, y in product(range(MAZEW), range(MAZEH)):
-        ns = []
+        n = []
         for i, j in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
             if 0 <= x + i < MAZEW and 0 <= y + j < MAZEH:
                 t = MAZE[x + y * MAZEW]
                 if t == TGROUND or t == TEND or t == TFLOWER:
-                    ns.append(nodes[x + i][y + j])
-        graph[nodes[x][y]] = ns
-    os = set()
-    cs = set()
-    end = nodes[x1][y1]
-    c = nodes[x0][y0]
+                    n.append(ns[x + i][y + j])
+        g[ns[x][y]] = n
+    os, cs = set(), set()
+    c, end = ns[x0][y0], ns[x1][y1]
     os.add(c)
     while os:
         c = min(os, key=lambda n:n.c + h(n.xy, (x1, y1)))
@@ -140,7 +138,7 @@ def path(x0, y0, x1, y1):
             return p[::-1]
         os.remove(c)
         cs.add(c)
-        for n in graph[c]:
+        for n in g[c]:
             if n in cs:
                 continue
             if n in os:
@@ -165,7 +163,7 @@ def shade(ch, b):
         return (ch, 0)
 
 
-def drawtile(t, tx, ty, px, py, sx, sy):
+def drawt(t, tx, ty, px, py, sx, sy):
     if t == TGROUND:
         ch = ' '
     elif t == TBLOCK:
@@ -210,9 +208,9 @@ def drawtile(t, tx, ty, px, py, sx, sy):
             #    pass
 
 
-def drawmaze(px, py, vx, vy, vw, vh):
+def drawm(px, py, vx, vy, vw, vh):
     for x, y in product(range(vx, vx + vw), range(vy, vy + vh)):
-        drawtile(gettile(x, y), x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
+        drawt(gett(x, y), x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
 
 
 def canmove(x, y):
@@ -223,15 +221,16 @@ def canmove(x, y):
         return False
 
 
-def idx(x, y):
-    return x + y * MAZEW
-
-
-def gettile(x, y):
+def gett(x, y):
     if 0 <= x < MAZEW and 0 <= y < MAZEH:
         return MAZE[x + y * MAZEW]
     else:
         return TOUT
+
+
+def sett(x, y, t):
+    if 0 <= x < MAZEW and 0 <= y < MAZEH:
+        MAZE[x + y * MAZEW] = t
 
 
 def main():
@@ -246,10 +245,10 @@ def main():
     #sound.play()
 
 
-    level_seed = 1337
-    px, py, mx, my = genmaze(level_seed)
+    lvl = 1337
+    px, py, mx, my = genm(lvl)
 
-    pold, mold = MAZE[idx(px, py)], MAZE[idx(mx, my)]
+    pold, mold = gett(px, py), gett(mx, my)
 
     ms = MSPEED
 
@@ -267,9 +266,9 @@ def main():
 
         vw, vh = SCRW // TILEW, SCRH // TILEH
         vx, vy = px - vw // 2, py - vh // 2
-        drawmaze(px, py, vx, vy, vw, vh)
+        drawm(px, py, vx, vy, vw, vh)
 
-        MAZE[idx(mx, my)] = mold
+        sett(mx, my, mold)
         ms -= ft
         if ms <= 0.:
             ms = MSPEED
@@ -278,10 +277,10 @@ def main():
                 mxx, myy = ps[1]
                 if canmove(mxx, myy):
                     mx, my = mxx, myy
-        mold = MAZE[idx(mx, my)]
-        MAZE[idx(mx, my)] = TMONSTER
+        mold = gett(mx, my)
+        sett(mx, my, TMONSTER)
 
-        MAZE[idx(px, py)] = pold
+        sett(px, py, pold)
         ch = SCR.getch()
         if ch == curses.KEY_UP and canmove(px, py - 1):
             py -= 1
@@ -294,23 +293,21 @@ def main():
         elif ch == 27:
             playing = False
 
-        t = gettile(px, py)
+        t = gett(px, py)
         if t == TEND:
-            level_seed += 1
-            px, py, mx, my = genmaze(level_seed)
+            lvl += 1
+            px, py, mx, my = genm(lvl)
         elif (mx, my) == (px, py):
             curses.flash()
-            px, py, mx, my = genmaze(level_seed)
+            px, py, mx, my = genm(lvl)
             mold, pold = TGROUND, TGROUND
-            MAZE[idx(mx, my)], MAZE[idx(px, py)] = TMONSTER, TPLAYER
+            sett(mx, my, TMONSTER)
+            sett(px, py, TPLAYER)
         else:
-            pold = MAZE[idx(px, py)]
-            MAZE[idx(px, py)] = TPLAYER
+            pold = t
+            sett(px, py, TPLAYER)
 
-        SCR.addstr(1, 2, str(int(ch)))
-        SCR.addstr(2, 2, str(px) + ',' + str(py))
-
-        SCR.move(SCRH - 1, SCRW - 1)
+        #SCR.move(SCRH - 1, SCRW - 1)
         SCR.refresh()
         time.sleep(0.01)
 
