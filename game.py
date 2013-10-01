@@ -251,12 +251,11 @@ def main():
 
     # Music
     pygame.mixer.init(44100, -16, 2, 4096)
-    pygame.mixer.music.load('music.xm')
-    pygame.mixer.music.play()
-    #sound = pygame.mixer.Sound('boom.wav')
-    #time.sleep(2)
-    #sound.play()
-
+    sound = pygame.mixer.Sound('/usr/share/aisleroit/sounds/splat.ogg')
+    sound2 = pygame.mixer.Sound('splat.ogg')
+    #pygame.mixer.music.load('music.xm')
+    #pygame.mixer.music.play()
+    
     lvl = 1337
     px, py, mx, my = genm(lvl)
 
@@ -309,7 +308,9 @@ def main():
         if t == TEND:
             lvl += 1
             px, py, mx, my = genm(lvl)
-        elif (mx, my) == (px, py):
+        elif (mx, my) == (px, py): # Caught!
+            sound.play()
+            sound2.play()
             curses.flash()
             px, py, mx, my = genm(lvl)
             mold, pold = TGND, TGND
