@@ -1,7 +1,7 @@
 import curses
 from math import sqrt
 import pygame
-from random import seed, shuffle, randint as ri
+from random import seed, shuffle, randint as ri, random
 import time
 
 SCR = curses.initscr()
@@ -21,7 +21,7 @@ TEND = 254
 MAZEW, MAZEH = 20, 20
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
 
-SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, chr(178)]
+SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, ' ']
 
 
 def genmaze(s):
@@ -126,9 +126,11 @@ def path(x0, y0, x1, y1):
 def shade(ch, b):
     if ch in SHADE:
         i = int(b * float(SHADE.index(ch)))
-        return SHADE[max(0, min(i, len(SHADE) - 1))]
+        if i > 7:
+            return (' ', curses.A_REVERSE)
+        return (SHADE[max(0, min(i, len(SHADE) - 1))], 0)
     else:
-        return ch
+        return (ch, 0)
 
 
 def drawtile(t, tx, ty, px, py, sx, sy):
@@ -137,23 +139,31 @@ def drawtile(t, tx, ty, px, py, sx, sy):
     elif t == TBLOCK:
         ch = curses.ACS_CKBOARD
     elif t == TOUT:
-        ch = '@'
+        ch = curses.ACS_CKBOARD
     elif t == TEND:
-        ch = 'e'
+        SCR.addstr(sy,   sx, '    _')
+        SCR.addstr(sy+1, sx, '  _|#')
+        SCR.addstr(sy+2, sx, '_|###')
+        return
     elif t == TPLAYER:
-        ch = curses.ACS_DIAMOND
+        SCR.addstr(sy,   sx, '  o /')
+        SCR.addstr(sy+1, sx, '()|` ')
+        SCR.addstr(sy+2, sx, ' / \ ')
+        return
     else:
         ch = '?'
 
     d = sqrt((px - tx) ** 2 + (py - ty) ** 2)
-    df = 25.0 / max(1.0, d * d)
+    df = 15.0 / max(1.0, d * d) + random()/20 # Flickering
+
 
     #curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
 
     for x in range(max(0, sx), min(SCRW, sx + TILEW)):
         for y in range(max(0, sy), min(SCRH, sy + TILEH)):
             #try:
-            SCR.addch(y, x, shade(ch, df)) #, curses.color_pair(1))
+            (sch, attr) = shade(ch, df)
+            SCR.addch(y, x, sch, attr) #, curses.color_pair(1))
             #except curses.error:
             #    pass
 
@@ -192,8 +202,8 @@ def main():
 
     # Music
     pygame.mixer.init(44100, -16, 2, 4096)
-    pygame.mixer.music.load('music.xm')
-    pygame.mixer.music.play()
+    #pygame.mixer.music.load('music.xm')
+    #pygame.mixer.music.play()
     #sound = pygame.mixer.Sound('boom.wav')
     #time.sleep(2)
     #sound.play()
