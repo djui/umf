@@ -23,7 +23,7 @@ TPLAYER = 255
 
 MSPEED = .5
 
-MAZEW, MAZEH = 20, 20
+MAZEW, MAZEH = 50, 50
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
 
 SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, chr(178)]
@@ -48,7 +48,7 @@ def genmaze(s):
             x1, y1 = x0 + d[0], y0 + d[1]
             if 0 <= x1 < w and 0 <= y1 < h:
                 if (x1, y1) not in v:
-                    m[x1 + y1 * w] = TGROUND
+                    m[x1 + y1 * w] = TFLOWER if ri(0, 100) < 5 else TGROUND
                     #if gettile(x1 - 1, y1 + 1) or gettile(x1 - 1, y1 - 1):
                     #    v.append((x1 - 1, y1))
                     #if gettile(x1 + 1, y1 + 1) or gettile(x1 + 1, y1 - 1):
