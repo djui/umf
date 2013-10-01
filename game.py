@@ -17,8 +17,11 @@ TBLOCK = 0
 TGROUND = 1
 TOUT = 2
 TFLOWER = 3
-TEND = 254
+TEND = 4
+TMONSTER = 254
 TPLAYER = 255
+
+MSPEED = 1.
 
 MAZEW, MAZEH = 20, 20
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
@@ -84,15 +87,19 @@ def genmaze(s):
     i = MAZE.index(TGROUND)
     px, py = i % MAZEW, i / MAZEW
 
-    i = MAZE.index(TEND)
-    ex, ey = i % MAZEW, i / MAZEW
-    for xy in path(px, py, ex, ey):
-        i = xy[0] + xy[1] * MAZEW
-        t = MAZE[i]
-        if t == TGROUND:
-            MAZE[i] = TFLOWER
+    i = len(MAZE) - 1 - list(reversed(MAZE)).index(TGROUND)
+    mx, my = i % MAZEW, i / MAZEW
 
-    return px, py
+    #i = MAZE.index(TEND)
+    #ex, ey = i % MAZEW, i / MAZEW
+    #for xy in path(px, py, ex, ey):
+    #    i = xy[0] + xy[1] * MAZEW
+    #    t = MAZE[i]
+    #    if t == TGROUND:
+    #        MAZE[i] = TFLOWER
+
+    return px, py, mx, my
+
 
 class Node:
     def __init__(self, x, y, t):
@@ -193,7 +200,7 @@ def drawmaze(px, py, vx, vy, vw, vh):
 def canmove(x, y):
     if 0 <= x < MAZEW and 0 <= y < MAZEH:
         t = MAZE[x + y * MAZEW]
-        return t == TGROUND or t == TEND or t == TFLOWER
+        return t == TGROUND or t == TEND or t == TFLOWER or t == TPLAYER or t == TMONSTER
     else:
         return False
 
@@ -222,12 +229,20 @@ def main():
 
 
     level_seed = 1337
-    px, py = genmaze(level_seed)
-    old = gettile(px, py)
+    px, py, mx, my = genmaze(level_seed)
+
+    pold, mold = MAZE[idx(px, py)], MAZE[idx(mx, my)]
+
+    ms = MSPEED
+
+    st = time.time()
 
     playing = True
 
     while playing:
+        now = time.time()
+        ft, st = now - st, now
+
         SCRH, SCRW = SCR.getmaxyx()
 
         SCR.erase()
@@ -236,8 +251,19 @@ def main():
         vx, vy = px - vw // 2, py - vh // 2
         drawmaze(px, py, vx, vy, vw, vh)
 
-        MAZE[idx(px, py)] = old
+        MAZE[idx(mx, my)] = mold
+        ms -= ft
+        if ms <= 0.:
+            ms = MSPEED
+            ps = path(mx, my, px, py)
+            if ps and len(ps) > 1:
+                mxx, myy = ps[1]
+                if canmove(mxx, myy):
+                    mx, my = mxx, myy
+        mold = MAZE[idx(mx, my)]
+        MAZE[idx(mx, my)] = TMONSTER
 
+        MAZE[idx(px, py)] = pold
         ch = SCR.getch()
         if ch == curses.KEY_UP and canmove(px, py - 1):
             py -= 1
@@ -252,14 +278,17 @@ def main():
         elif ch == 27:
             playing = False
 
-        if MAZE[idx(px, py)] == TEND:
+        t = gettile(px, py)
+        if t == TEND:
             level_seed += 1
-            px, py = genmaze(level_seed)
-
-        old = MAZE[idx(px, py)]
-        MAZE[idx(px, py)] = TPLAYER
-
-        # ai
+            px, py, mx, my = genmaze(level_seed)
+        elif (mx, my) == (px, py):
+            px, py, mx, my = genmaze(level_seed)
+            mold, pold = TGROUND, TGROUND
+            MAZE[idx(mx, my)], MAZE[idx(px, py)] = TMONSTER, TPLAYER
+        else:
+            pold = MAZE[idx(px, py)]
+            MAZE[idx(px, py)] = TPLAYER
 
         SCR.addstr(1, 2, str(int(ch)))
         SCR.addstr(2, 2, str(px) + ',' + str(py))
