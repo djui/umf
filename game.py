@@ -1,7 +1,7 @@
 import curses
 from math import sqrt
 from pygame import mixer as mix
-from random import seed, shuffle, randint as ri, random
+from random import *
 from itertools import product
 import time
 
@@ -40,7 +40,7 @@ def genm(s):
     n = [(-1, 0), (0, -1), (1, 0), (0, 1)]
     m, w, h = MAZE, MAZEW, MAZEH
     v, s = [], []
-    x0, y0 = (1 + ri(0, (w - 1) // 2) * 2, 1 + ri(0, (h - 1) // 2) * 2)
+    x0, y0 = (1 + randint(0, (w - 1) // 2) * 2, 1 + randint(0, (h - 1) // 2) * 2)
     while len(v) < len(m):
         v.append((x0, y0))
         found = False
@@ -49,7 +49,7 @@ def genm(s):
             x1, y1 = x0 + d[0], y0 + d[1]
             if 0 <= x1 < w and 0 <= y1 < h:
                 if (x1, y1) not in v:
-                    r = ri(0, 200)
+                    r = randint(0, 200)
                     if r < 2:
                         t = TFLW
                     elif r < 50:
@@ -87,7 +87,7 @@ def genm(s):
         #time.sleep(0.01)
 
     while True:
-        i = ri(0, MAZEW * MAZEH - 1)
+        i = randint(0, MAZEW * MAZEH - 1)
         if MAZE[i] in WALK:
             MAZE[i] = TEND
             break
@@ -199,16 +199,13 @@ def drawt(t, tx, ty, px, py, sx, sy):
             SCR.addstr(sy+1, sx, '(o O)')
             SCR.addstr(sy+2, sx, '/v^v\\')
         elif d <= 5.5:
-            SCR.addstr(sy,   sx, '     ')
             SCR.addstr(sy+1, sx, ' o O ')
             SCR.addstr(sy+2, sx, ' , v ')
         elif d <= 7.:
-            SCR.addstr(sy,   sx, '     ')
             SCR.addstr(sy+1, sx, ' . o ')
             SCR.addstr(sy+2, sx, '   , ')
         return
     elif t == TFLW:
-        SCR.addstr(sy,   sx, '     ')
         SCR.addstr(sy+1, sx, '  w  ')
         SCR.addstr(sy+2, sx, '_\|/_')
         return
