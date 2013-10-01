@@ -21,7 +21,7 @@ TEND = 4
 TMONSTER = 254
 TPLAYER = 255
 
-MSPEED = .35
+MSPD = .35
 
 MAZEW, MAZEH = 50, 50
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
@@ -166,9 +166,7 @@ def shade(ch, b):
 def drawt(t, tx, ty, px, py, sx, sy):
     if t == TGROUND:
         ch = ' '
-    elif t == TBLOCK:
-        ch = curses.ACS_CKBOARD
-    elif t == TOUT:
+    elif t == TBLOCK or t == TOUT:
         ch = curses.ACS_CKBOARD
     elif t == TEND:
         SCR.addstr(sy,   sx, '    _')
@@ -196,16 +194,8 @@ def drawt(t, tx, ty, px, py, sx, sy):
     d = sqrt((px - tx) ** 2 + (py - ty) ** 2)
     df = 15.0 / max(1.0, d * d) + random()/20 # Flickering
 
-
-    #curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
-
-    for x in range(max(0, sx), min(SCRW, sx + TILEW)):
-        for y in range(max(0, sy), min(SCRH, sy + TILEH)):
-            #try:
-            (sch, attr) = shade(ch, df)
-            SCR.addch(y, x, sch, attr) #, curses.color_pair(1))
-            #except curses.error:
-            #    pass
+    for x, y in product(range(sx, sx + TILEW), range(sy, sy + TILEH)):
+        SCR.addch(y, x, *shade(ch, df))
 
 
 def drawm(px, py, vx, vy, vw, vh):
@@ -244,13 +234,12 @@ def main():
     #time.sleep(2)
     #sound.play()
 
-
     lvl = 1337
     px, py, mx, my = genm(lvl)
 
     pold, mold = gett(px, py), gett(mx, my)
 
-    ms = MSPEED
+    ms = MSPD
 
     st = time.time()
 
@@ -270,8 +259,8 @@ def main():
 
         sett(mx, my, mold)
         ms -= ft
-        if ms <= 0.:
-            ms = MSPEED
+        if ms < 0:
+            ms = MSPD
             ps = path(mx, my, px, py)
             if ps and len(ps) > 1:
                 mxx, myy = ps[1]
