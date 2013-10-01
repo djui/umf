@@ -2,6 +2,7 @@ import curses
 from math import sqrt
 import pygame
 from random import seed, shuffle, randint as ri
+from itertools import product
 import time
 
 SCR = curses.initscr()
@@ -15,8 +16,9 @@ TILEW, TILEH = 5, 3
 TBLOCK = 0
 TGROUND = 1
 TOUT = 2
-TPLAYER = 255
+TFLOWER = 3
 TEND = 254
+TPLAYER = 255
 
 MAZEW, MAZEH = 20, 20
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
@@ -79,47 +81,70 @@ def genmaze(s):
             MAZE[i] = TEND
             break
 
+    i = MAZE.index(TGROUND)
+    px, py = i % MAZEW, i / MAZEW
+
+    i = MAZE.index(TEND)
+    ex, ey = i % MAZEW, i / MAZEW
+    for xy in path(px, py, ex, ey):
+        i = xy[0] + xy[1] * MAZEW
+        t = MAZE[i]
+        if t == TGROUND:
+            MAZE[i] = TFLOWER
+
+    return px, py
 
 class Node:
-    def __init__(self, xy):
-        self.c = 0
+    def __init__(self, x, y, t):
+        if t == TGROUND or t == TEND or t == TFLOWER:
+            self.c = 0
+        else:
+            self.c = 1000
         self.p = None
-        self.xy = xy
-
-
-def vadd(xy, dxy):
-    return (xy[0] + dxy[0], xy[1] + dxy[1])
+        self.xy = (x, y)
 
 
 def path(x0, y0, x1, y1):
-    openset = set()
-    closedset = set()
-    current = Node((x0, y0))
-    openset.add(current)
-    while openset:
-        current = min(openset, key=lambda n:n.c)
-        if current.xy == end.xy:
-            path = []
-            while current.parent:
-                path.append(current)
-                current = current.parent
-            path.append(current)
-            return path[::-1]
-        openset.remove(current)
-        closedset.add(current)
-        for move in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
-            node = Node(vadd(current.xy, move))
-            if node in closedset:
+    def h(xy, end):
+        return sqrt((xy[0] - end[0]) ** 2 + (xy[1] - end[1]) ** 2)
+    nodes = [[Node(x, y, MAZE[x + y * MAZEW]) for y in range(MAZEH)] for x in range(MAZEW)]
+    graph = {}
+    for x, y in product(range(MAZEW), range(MAZEH)):
+        ns = []
+        for i, j in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+            if 0 <= x + i < MAZEW and 0 <= y + j < MAZEH:
+                t = MAZE[x + y * MAZEW]
+                if t == TGROUND or t == TEND or t == TFLOWER:
+                    ns.append(nodes[x + i][y + j])
+        graph[nodes[x][y]] = ns
+    os = set()
+    cs = set()
+    end = nodes[x1][y1]
+    c = nodes[x0][y0]
+    os.add(c)
+    while os:
+        c = min(os, key=lambda n:n.c + h(n.xy, (x1, y1)))
+        if c == end:
+            p = []
+            while c.p:
+                p.append(c.xy)
+                c = c.p
+            p.append(c.xy)
+            return p[::-1]
+        os.remove(c)
+        cs.add(c)
+        for n in graph[c]:
+            if n in cs:
                 continue
-            if node in openset:
-                new_c = current.c + 1
-                if node.c > new_c:
-                    node.c = new_c
-                    node.parent = current
+            if n in os:
+                new_c = c.c + 1
+                if n.c > new_c:
+                    n.c = new_c
+                    n.p = c
             else:
-                node.c = current.c + 1
-                node.parent = current
-                openset.add(node)
+                n.c = c.c + 1
+                n.p = c
+                os.add(n)
     return None
 
 
@@ -137,11 +162,13 @@ def drawtile(t, tx, ty, px, py, sx, sy):
     elif t == TBLOCK:
         ch = curses.ACS_CKBOARD
     elif t == TOUT:
-        ch = '@'
+        ch = 'O'
     elif t == TEND:
-        ch = 'e'
+        ch = 'V'
     elif t == TPLAYER:
         ch = curses.ACS_DIAMOND
+    elif t == TFLOWER:
+        ch = 'i'
     else:
         ch = '?'
 
@@ -159,15 +186,14 @@ def drawtile(t, tx, ty, px, py, sx, sy):
 
 
 def drawmaze(px, py, vx, vy, vw, vh):
-    for x in range(vx, vx + vw):
-        for y in range(vy, vy + vh):
-            drawtile(gettile(x, y), x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
+    for x, y in product(range(vx, vx + vw), range(vy, vy + vh)):
+        drawtile(gettile(x, y), x, y, px, py, (x - vx) * TILEW, (y - vy) * TILEH)
 
 
 def canmove(x, y):
     if 0 <= x < MAZEW and 0 <= y < MAZEH:
         t = MAZE[x + y * MAZEW]
-        return t == TGROUND or t == TEND
+        return t == TGROUND or t == TEND or t == TFLOWER
     else:
         return False
 
@@ -186,10 +212,6 @@ def gettile(x, y):
 def main():
     SCR.nodelay(1)
 
-    level_seed = 1337
-
-    genmaze(level_seed)
-
     # Music
     pygame.mixer.init(44100, -16, 2, 4096)
     pygame.mixer.music.load('music.xm')
@@ -198,9 +220,10 @@ def main():
     #time.sleep(2)
     #sound.play()
 
-    old = TGROUND
-    i = MAZE.index(TGROUND)
-    px, py = i % MAZEW, i / MAZEW
+
+    level_seed = 1337
+    px, py = genmaze(level_seed)
+    old = gettile(px, py)
 
     playing = True
 
@@ -231,10 +254,9 @@ def main():
 
         if MAZE[idx(px, py)] == TEND:
             level_seed += 1
-            genmaze(level_seed)
-            i = MAZE.index(TGROUND)
-            px, py = i % MAZEW, i / MAZEW
+            px, py = genmaze(level_seed)
 
+        old = MAZE[idx(px, py)]
         MAZE[idx(px, py)] = TPLAYER
 
         # ai
