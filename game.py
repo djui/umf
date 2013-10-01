@@ -21,7 +21,7 @@ TEND = 4
 TMONSTER = 254
 TPLAYER = 255
 
-MSPEED = 1.
+MSPEED = .5
 
 MAZEW, MAZEH = 20, 20
 MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
@@ -273,8 +273,6 @@ def main():
             px -= 1
         elif ch == curses.KEY_RIGHT and canmove(px + 1, py):
             px += 1
-        elif ch == 32:
-            curses.flash()
         elif ch == 27:
             playing = False
 
@@ -283,6 +281,7 @@ def main():
             level_seed += 1
             px, py, mx, my = genmaze(level_seed)
         elif (mx, my) == (px, py):
+            curses.flash()
             px, py, mx, my = genmaze(level_seed)
             mold, pold = TGROUND, TGROUND
             MAZE[idx(mx, my)], MAZE[idx(px, py)] = TMONSTER, TPLAYER
@@ -299,7 +298,7 @@ def main():
 
 if __name__ == '__main__':
     #try:
-        main()
+    main()
     #finally:
     #    curses.nocbreak()
     #    SCR.keypad(0)
