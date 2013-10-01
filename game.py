@@ -1,6 +1,6 @@
 import curses
 from math import sqrt
-import pygame
+from pygame import mixer as mix
 from random import seed, shuffle, randint as ri, random
 from itertools import product
 import time
@@ -26,9 +26,9 @@ WALK = [TGND, TGND2, TFLW, TEND]
 MSPD = .35
 
 MAZEW, MAZEH = 50, 50
-MAZE = [TBLOCK for x in range(MAZEW * MAZEH)]
+MAZE = []
 
-SHADE = [' ', ' ', '.', ',', '+', curses.ACS_PLMINUS, '#', curses.ACS_CKBOARD, ' ']
+SHADE = [' ', ' ', '.', ',', '+', '%', '#', curses.ACS_CKBOARD, ' ']
 
 
 def genm(s):
@@ -246,87 +246,82 @@ def sett(x, y, t):
         MAZE[x + y * MAZEW] = t
 
 
-def main():
-    SCR.nodelay(1)
+SCR.nodelay(1)
 
-    # Music
-    pygame.mixer.init(44100, -16, 2, 4096)
-    sound = pygame.mixer.Sound('/usr/share/aisleroit/sounds/splat.ogg')
-    pygame.mixer.music.load('music.xm')
-    pygame.mixer.music.play()
-    
-    lvl = 1337
-    px, py, mx, my = genm(lvl)
+# Music
+mix.init(44100, -16, 2, 4096)
+p = '/usr/lib/libreoffice/share/gallery/sounds/'
+sbeg = mix.Sound(p + 'drama.wav')
+sdie = mix.Sound('/usr/share/aisleroit/sounds/splat.ogg')
+slvl = mix.Sound(p + 'apert.wav')
+mix.music.load('music.xm')
+mix.music.play()
 
-    pold, mold = gett(px, py), gett(mx, my)
+lvl = 1337
+px, py, mx, my = genm(lvl)
 
-    ms = MSPD
+pold, mold = gett(px, py), gett(mx, my)
 
-    st = time.time()
+ms = MSPD
 
-    playing = True
+st = time.time()
+sbeg.play()
 
-    while playing:
-        now = time.time()
-        ft, st = now - st, now
+playing = True
 
-        SCRH, SCRW = SCR.getmaxyx()
+while playing:
+    now = time.time()
+    ft, st = now - st, now
 
-        SCR.erase()
+    SCRH, SCRW = SCR.getmaxyx()
 
-        vw, vh = SCRW // TILEW, SCRH // TILEH
-        vx, vy = px - vw // 2, py - vh // 2
-        drawm(px, py, vx, vy, vw, vh)
+    SCR.erase()
 
-        sett(mx, my, mold)
-        ms -= ft
-        if ms < 0:
-            ms = MSPD
-            ps = path(mx, my, px, py)
-            if ps and len(ps) > 1:
-                mxx, myy = ps[1]
-                if canmove(mxx, myy):
-                    mx, my = mxx, myy
-        mold = gett(mx, my)
+    vw, vh = SCRW // TILEW, SCRH // TILEH
+    vx, vy = px - vw // 2, py - vh // 2
+    drawm(px, py, vx, vy, vw, vh)
+
+    sett(mx, my, mold)
+    ms -= ft
+    if ms < 0:
+        ms = MSPD
+        ps = path(mx, my, px, py)
+        if ps and len(ps) > 1:
+            mxx, myy = ps[1]
+            if canmove(mxx, myy):
+                mx, my = mxx, myy
+    mold = gett(mx, my)
+    sett(mx, my, TBAD)
+
+    sett(px, py, pold)
+    ch = SCR.getch()
+    if ch == curses.KEY_UP and canmove(px, py - 1):
+        py -= 1
+    elif ch == curses.KEY_DOWN and canmove(px, py + 1):
+        py += 1
+    elif ch == curses.KEY_LEFT and canmove(px - 1, py):
+        px -= 1
+    elif ch == curses.KEY_RIGHT and canmove(px + 1, py):
+        px += 1
+    elif ch == 27:
+        playing = False
+
+    t = gett(px, py)
+    if t == TEND:
+        slvl.play()
+        lvl += 1
+        px, py, mx, my = genm(lvl)
+    elif (mx, my) == (px, py): # Caught!
+        sdie.play()
+        curses.flash()
+        px, py, mx, my = genm(lvl)
+        mold, pold = TGND, TGND
         sett(mx, my, TBAD)
+        sett(px, py, TPLY)
+    else:
+        pold = t
+        sett(px, py, TPLY)
 
-        sett(px, py, pold)
-        ch = SCR.getch()
-        if ch == curses.KEY_UP and canmove(px, py - 1):
-            py -= 1
-        elif ch == curses.KEY_DOWN and canmove(px, py + 1):
-            py += 1
-        elif ch == curses.KEY_LEFT and canmove(px - 1, py):
-            px -= 1
-        elif ch == curses.KEY_RIGHT and canmove(px + 1, py):
-            px += 1
-        elif ch == 27:
-            playing = False
-
-        t = gett(px, py)
-        if t == TEND:
-            lvl += 1
-            px, py, mx, my = genm(lvl)
-        elif (mx, my) == (px, py): # Caught!
-            sound.play()
-            curses.flash()
-            px, py, mx, my = genm(lvl)
-            mold, pold = TGND, TGND
-            sett(mx, my, TBAD)
-            sett(px, py, TPLY)
-        else:
-            pold = t
-            sett(px, py, TPLY)
-
-        #SCR.move(SCRH - 1, SCRW - 1)
-        SCR.refresh()
-        time.sleep(0.01)
-
-if __name__ == '__main__':
-    #try:
-    main()
-    #finally:
-    #    curses.nocbreak()
-    #    SCR.keypad(0)
-    #    curses.echo()
-    #    curses.endwin()
+    #SCR.move(SCRH - 1, SCRW - 1)
+    SCR.refresh()
+    time.sleep(0.01)
